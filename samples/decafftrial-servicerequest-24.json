@@ -1,0 +1,41 @@
+{
+    "resourceType": "ServiceRequest",
+    "id": "diary-P001",
+    "status": "completed",
+    "intent": "order",
+    "code": {
+        "text": "Decaff trial diary"
+    },
+    "extension": [
+        {
+            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-servicerequest-questionnaire",
+            "valueCanonical": "https://traumatisedturkey.dev/fhir/Questionnaire/decaff-diary|0.24.0"
+        }
+    ],
+    "identifier": [
+        {
+            "system": "https://provider.traumatisedturkey.dev/fhir/identifier/service-request",
+            "value": "sr-7f3a9c1e"
+        }
+    ],
+    "focus": [
+        {
+            "reference": "Questionnaire/decaff-diary"
+        }
+    ],
+    "requester": {
+        "display": "St Swithin's Hospital"
+    },
+    "authoredOn": "2026-07-31T12:00:00Z",
+    "occurrenceTiming": {
+        "repeat": {
+            "frequency": 1,
+            "period": 1,
+            "periodUnit": "d",
+            "boundsPeriod": {
+                "start": "2026-06-01T00:00:00Z",
+                "end": null
+            }
+        }
+    }
+}

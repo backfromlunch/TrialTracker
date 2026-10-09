@@ -1,0 +1,85 @@
+{
+  "resourceType": "Questionnaire",
+  "id": "team-stress",
+  "publisher": "Orbital Systems Directorate",
+  "url": "https://traumatisedturkey.dev/fhir/Questionnaire/team-stress",
+  "version": "0.1.0",
+  "status": "active",
+  "title": "Team Stress Diary",
+  "item": [
+    {
+      "linkId": "LogEntry",
+      "text": "Log entry",
+      "type": "group",
+      "repeats": true,
+      "item": [
+        {
+          "linkId": "TeamCohesion",
+          "text": "Team Cohesion",
+          "type": "choice",
+          "answerOption": [
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys5",
+                "code": "1",
+                "display": "Fragmented: cliquey, little interaction"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys5",
+                "code": "2",
+                "display": "Polite, distant: cooperative but surface-level"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys5",
+                "code": "3",
+                "display": "Cordial: some sharing, generally at ease"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys5",
+                "code": "4",
+                "display": "Supportive: trusting, looks out for one another"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys5",
+                "code": "5",
+                "display": "Tight bond: deep trust throughout the team"
+              }
+            }
+          ]
+        },
+        {
+          "linkId": "CognitiveFatigue",
+          "text": "Cognitive Fatigue",
+          "type": "integer",
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+              "valueInteger": 0
+            },
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+              "valueInteger": 10
+            }
+          ]
+        },
+        {
+          "linkId": "MissionTime",
+          "text": "Mission Time (hh:mm)",
+          "type": "period"
+        },
+        {
+          "linkId": "Comments",
+          "type": "text"
+        }
+      ]
+    }
+  ]
+}

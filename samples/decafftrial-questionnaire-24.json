@@ -1,0 +1,144 @@
+{
+  "resourceType": "Questionnaire",
+  "id": "decaff-diary",
+  "publisher": "Data R Us",
+  "url": "https://traumatisedturkey.dev/fhir/Questionnaire/decaff-diary",
+  "version": "0.24.0",
+  "status": "active",
+  "title": "Decaff Diary Questions",
+  "item": [
+    {
+      "linkId": "LogEntry",
+      "text": "Log entry",
+      "type": "group",
+      "repeats": true,
+      "item": [
+        {
+          "linkId": "SleepDuration",
+          "text": "Sleep Duration (hh:mm)",
+          "type": "period"
+        },
+        {
+          "linkId": "SleepScore",
+          "text": "Sleep Score",
+          "type": "integer",
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+              "valueInteger": 0
+            },
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+              "valueInteger": 100
+            }
+          ]
+        },
+        {
+          "linkId": "SleepQ",
+          "text": "Sleep Quality",
+          "type": "choice",
+          "answerOption": [
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys7",
+                "code": "1",
+                "display": "Extremely poor: felt awake most of the night, or exceptionally fragmented"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys7",
+                "code": "2",
+                "display": "Very poor: frequent waking, hard to settle, unrefreshing throughout"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys7",
+                "code": "3",
+                "display": "Poor: several disturbances, general sense of a bad night"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys7",
+                "code": "4",
+                "display": "Fair: some disturbance, but more settled than not"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys7",
+                "code": "5",
+                "display": "Fairly good: minor disturbance only, mostly continuous"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys7",
+                "code": "6",
+                "display": "Good: continuous as far as I recall, no notable disturbance"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys7",
+                "code": "7",
+                "display": "Very good: deep, continuous, unmistakably excellent"
+              }
+            }
+          ]
+        },
+        {
+          "linkId": "ReactionTime",
+          "text": "Reaction Time (mS)",
+          "type": "integer",
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+              "valueInteger": 100
+            },
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+              "valueInteger": 2000
+            }
+          ]
+        },
+        {
+          "linkId": "NCaffeine",
+          "text": "Number of Caffeinated Drinks",
+          "type": "integer",
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+              "valueInteger": 0
+            },
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+              "valueInteger": 10
+            }
+          ]
+        },
+        {
+          "linkId": "NAlcohol",
+          "text": "Number of Alcoholic Drinks",
+          "type": "integer",
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+              "valueInteger": 0
+            },
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+              "valueInteger": 10
+            }
+          ]
+        },
+        {
+          "linkId": "Comments",
+          "type": "text"
+        }
+      ]
+    }
+  ]
+}

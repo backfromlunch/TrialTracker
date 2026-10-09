@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.TrialTracker" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Shown for the brief window between process start and TrialSetupViewModel's
+         startup DB check completing - see MainActivity's installSplashScreen /
+         setKeepOnScreenCondition. postSplashScreenTheme hands off to the real app theme once the
+         splash is dismissed; this style is deliberately not the theme the app runs under.
+         Background colour matches Purple40 (Theme.kt's light-scheme primary) since there's no
+         dedicated splash asset yet - swap windowSplashScreenBackground/AnimatedIcon for real
+         branding whenever that exists. -->
+    <style name="Theme.TrialTracker.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#6650A4</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.TrialTracker</item>
+    </style>
+</resources>

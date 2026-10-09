@@ -1,0 +1,91 @@
+{
+  "resourceType": "Questionnaire",
+  "id": "flux-inspection",
+  "publisher": "Hill Valley Applied Sciences",
+  "url": "https://traumatisedturkey.dev/fhir/Questionnaire/flux-inspection",
+  "version": "0.1.0",
+  "status": "active",
+  "title": "Flux Capacitor Inspection Log",
+  "item": [
+    {
+      "linkId": "LogEntry",
+      "text": "Log entry",
+      "type": "group",
+      "repeats": true,
+      "item": [
+        {
+          "linkId": "FluxCapacitorLevel",
+          "text": "Flux Capacitor Level (GW)",
+          "type": "decimal",
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+              "valueDecimal": 20.0
+            },
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+              "valueDecimal": 420.0
+            }
+          ]
+        },
+        {
+          "linkId": "StructuralWear",
+          "text": "Structural Wear",
+          "type": "choice",
+          "answerOption": [
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys5",
+                "code": "0",
+                "display": "None: no visible wear"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys5",
+                "code": "1",
+                "display": "Minimal: light surface wear only"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys5",
+                "code": "2",
+                "display": "Acceptable: within normal tolerances"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys5",
+                "code": "3",
+                "display": "Heavy: significant wear, monitor closely"
+              }
+            },
+            {
+              "valueCoding": {
+                "system": "https://traumatisedturkey.dev/fhir/CodeSystem/sys5",
+                "code": "4",
+                "display": "Unacceptable: exceeds tolerance, requires action"
+              }
+            }
+          ]
+        },
+        {
+          "linkId": "IntrusionCount",
+          "text": "Intrusion Incident Count",
+          "type": "integer",
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+              "valueInteger": 0
+            },
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+              "valueInteger": 20
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
