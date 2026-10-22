@@ -1,5 +1,7 @@
 package dev.traumatisedturkey.trialtracker.questionnaire
 
+import dev.traumatisedturkey.trialtracker.fields.FieldDef
+
 // Result of comparing two questionnaires for "safe to replace" purposes.
 sealed class QuestionnaireCompatibility {
     object Compatible : QuestionnaireCompatibility()

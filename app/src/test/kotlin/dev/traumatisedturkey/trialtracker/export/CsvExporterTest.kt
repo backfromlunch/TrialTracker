@@ -1,9 +1,12 @@
 package dev.traumatisedturkey.trialtracker.export
 
 import dev.traumatisedturkey.trialtracker.data.Entry
+import dev.traumatisedturkey.trialtracker.fixtures.counterField
 import dev.traumatisedturkey.trialtracker.fixtures.exampleQuestionnaire
 import dev.traumatisedturkey.trialtracker.fixtures.exampleServiceRequest
+import dev.traumatisedturkey.trialtracker.fixtures.withGroupItems
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import java.time.OffsetDateTime
 
@@ -24,7 +27,7 @@ class CsvExporterTest {
     @Test
     fun `header row uses date plus field ids in order`() {
         val csv = CsvExporter.buildCsv(exampleQuestionnaire, exampleServiceRequest, emptyList(), authored)
-        assertEquals("date,sleep,weight,notes,mood,logged_at,bedtime", csv.lines()[N_COMMENT_LINES])
+        assertEquals("date,sleep,weight,notes,mood,logged_at,bedtime,coffee", csv.lines()[N_COMMENT_LINES])
     }
 
     @Test
@@ -35,7 +38,7 @@ class CsvExporterTest {
             )
         val csv = CsvExporter.buildCsv(exampleQuestionnaire, exampleServiceRequest, entries, authored)
         val lines = csv.lines().drop(N_NON_DATA_LINES)
-        assertEquals("2026-07-24,7,,fine,,,", lines[0])
+        assertEquals("2026-07-24,7,,fine,,,,0", lines[0])
     }
 
     @Test
@@ -48,11 +51,11 @@ class CsvExporterTest {
             )
         val csv = CsvExporter.buildCsv(exampleQuestionnaire, exampleServiceRequest, entries, authored)
         val lines = csv.lines().drop(N_NON_DATA_LINES)
-        assertEquals("2026-07-24,7,,\"has, a comma\",,,", lines[0])
-        assertEquals("2026-07-25,7,,\"has \"\"quotes\"\"\",,,", lines[1])
+        assertEquals("2026-07-24,7,,\"has, a comma\",,,,0", lines[0])
+        assertEquals("2026-07-25,7,,\"has \"\"quotes\"\"\",,,,0", lines[1])
         // the quoted newline keeps the value on the same logical row but adds a physical line break
         assertEquals("2026-07-26,7,,\"line1", lines[2])
-        assertEquals("line2\",,,", lines[3])
+        assertEquals("line2\",,,,0", lines[3])
     }
 
     @Test
@@ -63,7 +66,7 @@ class CsvExporterTest {
             )
         val csv = CsvExporter.buildCsv(exampleQuestionnaire, exampleServiceRequest, entries, authored)
         val lines = csv.lines().drop(N_NON_DATA_LINES)
-        assertEquals("2026-07-24,7,,,,,", lines[0])
+        assertEquals("2026-07-24,7,,,,,,0", lines[0])
     }
 
     @Test
@@ -74,6 +77,59 @@ class CsvExporterTest {
             )
         val csv = CsvExporter.buildCsv(exampleQuestionnaire, exampleServiceRequest, entries, authored)
         val lines = csv.lines().drop(N_NON_DATA_LINES)
-        assertEquals("2026-07-24,,,,,,", lines[0])
+        assertEquals("2026-07-24,,,,,,,0", lines[0])
+    }
+
+    // --- counters ---
+
+    private fun counterCsv(answersJson: String): String {
+        val entries = listOf(Entry(trialId = trialId, date = "2026-07-24", answersJson = answersJson))
+        return CsvExporter.buildCsv(exampleQuestionnaire, exampleServiceRequest, entries, authored)
+    }
+
+    private fun counterDataLine(answersJson: String): String = counterCsv(answersJson).lines()[N_NON_DATA_LINES]
+
+    @Test
+    fun `counter column appears in the header in questionnaire order`() {
+        val csv = counterCsv("{}")
+        assertEquals("date,sleep,weight,notes,mood,logged_at,bedtime,coffee", csv.lines()[N_COMMENT_LINES])
+    }
+
+    @Test
+    fun `counter renders as its count`() {
+        val line = counterDataLine(
+            """{"coffee":["2026-07-24T08:12:03+01:00","2026-07-24T11:40:51+01:00","2026-07-24T15:05:27+01:00"]}""",
+        )
+        assertEquals("2026-07-24,,,,,,,3", line)
+    }
+
+    @Test
+    fun `counter does not leak timestamps into the csv`() {
+        val csv = counterCsv("""{"coffee":["2026-07-24T08:12:03+01:00"]}""")
+        assertFalse(csv.contains("08:12"))
+    }
+
+    @Test
+    fun `an empty counter array renders as zero`() {
+        assertEquals("2026-07-24,,,,,,,0", counterDataLine("""{"coffee":[]}"""))
+    }
+
+    @Test
+    fun `a missing counter renders as zero`() {
+        assertEquals("2026-07-24,7,,,,,,0", counterDataLine("""{"sleep":7}"""))
+    }
+
+    @Test
+    fun `a null or non-array counter answer renders as zero`() {
+        assertEquals("2026-07-24,,,,,,,0", counterDataLine("""{"coffee":null}"""))
+        assertEquals("2026-07-24,,,,,,,0", counterDataLine("""{"coffee":"oops"}"""))
+    }
+
+    @Test
+    fun `a counter does not disturb the other columns`() {
+        assertEquals(
+            "2026-07-24,7,,fine,,,,2",
+            counterDataLine("""{"sleep":7,"notes":"fine","coffee":["2026-07-24T08:12:03Z","2026-07-24T09:00:00Z"]}"""),
+        )
     }
 }

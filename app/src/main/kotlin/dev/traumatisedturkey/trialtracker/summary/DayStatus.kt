@@ -1,9 +1,10 @@
 package dev.traumatisedturkey.trialtracker.summary
 
+import dev.traumatisedturkey.trialtracker.fields.FieldDef
 import dev.traumatisedturkey.trialtracker.questionnaire.DefaultFieldOfInterestPolicy
-import dev.traumatisedturkey.trialtracker.questionnaire.FieldDef
 import dev.traumatisedturkey.trialtracker.questionnaire.FieldOfInterestPolicy
 import dev.traumatisedturkey.trialtracker.questionnaire.Questionnaire
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -16,12 +17,18 @@ enum class DayStatus {
 
 /**
  * A field counts as "completed" if it has an answer AND that answer isn't a blank string.
+ * A counter's answer is an array, and any array counts, including an empty one (zero).
  */
 private fun isCompleted(
     answers: JsonObject,
     field: FieldDef,
 ): Boolean {
-    val value = answers[field.linkId] as? JsonPrimitive ?: return false
+    val answer = answers[field.linkId]
+    // Any saved entry holds every counter (`[]` for zero), so a counter never keeps a saved day PARTIAL.
+    // A day with no entry at all is EMPTY.
+    if (field is FieldDef.CounterField) return answer is JsonArray
+
+    val value = answer as? JsonPrimitive ?: return false
     // Deliberately type-agnostic: contentOrNull returns the raw string content for
     // numbers and choice values too (e.g. "3", "mild"), so the same blank-check
     // works uniformly for integer/decimal/choice/text/date/period without a per-type case.

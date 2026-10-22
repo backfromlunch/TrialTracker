@@ -1,9 +1,11 @@
 package dev.traumatisedturkey.trialtracker.fixtures
 
-import dev.traumatisedturkey.trialtracker.questionnaire.Choice
-import dev.traumatisedturkey.trialtracker.questionnaire.Coding
-import dev.traumatisedturkey.trialtracker.questionnaire.Extension
-import dev.traumatisedturkey.trialtracker.questionnaire.FieldDef
+import dev.traumatisedturkey.trialtracker.fields.Choice
+import dev.traumatisedturkey.trialtracker.fields.CodeableConcept
+import dev.traumatisedturkey.trialtracker.fields.Coding
+import dev.traumatisedturkey.trialtracker.fields.Extension
+import dev.traumatisedturkey.trialtracker.fields.ExtensionCoding
+import dev.traumatisedturkey.trialtracker.fields.FieldDef
 import dev.traumatisedturkey.trialtracker.questionnaire.Questionnaire
 import dev.traumatisedturkey.trialtracker.questionnaire.SingleItem
 import kotlinx.serialization.json.JsonPrimitive
@@ -12,6 +14,17 @@ const val HIDDEN_EXTENSION_URL = "http://hl7.org/fhir/StructureDefinition/questi
 const val MIN_VALUE_EXTENSION_URL = "http://hl7.org/fhir/StructureDefinition/minValue"
 const val MAX_VALUE_EXTENSION_URL = "http://hl7.org/fhir/StructureDefinition/maxValue"
 const val MOOD_SYSTEM_URL = "https://example.com/fhir/CodeSystem/mood"
+const val ITEM_CONTROL_EXTENSION_URL = "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl"
+const val ITEM_CONTROL_SYSTEM_URL = "http://hl7.org/fhir/questionnaire-item-control"
+const val SLIDER_LOW_LABEL_EXTENSION_URL = "https://traumatisedturkey.dev/fhir/StructureDefinition/slider-low-label"
+const val SLIDER_HIGH_LABEL_EXTENSION_URL = "https://traumatisedturkey.dev/fhir/StructureDefinition/slider-high-label"
+const val COUNTER_EXTENSION_URL = "https://traumatisedturkey.dev/fhir/StructureDefinition/questionnaire-counter"
+
+fun counterField(linkId: String, text: String? = null): FieldDef.CounterField = FieldDef.CounterField(
+    linkId = linkId,
+    text = text,
+    extension = listOf(Extension(url = COUNTER_EXTENSION_URL, valueBoolean = true)),
+)
 
 // This sample questionnaire should cover every kind of FieldDef.
 val exampleQuestionnaire = Questionnaire(
@@ -56,6 +69,7 @@ val exampleQuestionnaire = Questionnaire(
                     extension = listOf(Extension(url = HIDDEN_EXTENSION_URL, valueBoolean = true)),
                 ),
                 FieldDef.PeriodField(linkId = "bedtime"),
+                counterField(linkId = "coffee"),
             ),
         ),
     ),
@@ -91,7 +105,9 @@ val exampleQuestionnaireJson =
                   { "valueCoding": { "system": "$MOOD_SYSTEM_URL", "code": "other", "display": "Other" } } ] },
               { "linkId": "logged_at", "type": "date", "extension": [
                   { "url": "$HIDDEN_EXTENSION_URL", "valueBoolean": true } ] },
-              { "linkId": "bedtime", "type": "period" }
+              { "linkId": "bedtime", "type": "period" },
+              { "linkId": "coffee", "type": "integer", "extension": [
+                  { "url": "$COUNTER_EXTENSION_URL", "valueBoolean": true } ] }
               ]
             }
           ]
@@ -116,5 +132,32 @@ fun decimalField(linkId: String, min: Float? = null, max: Float? = null): FieldD
     extension = listOfNotNull(
         min?.let { Extension(url = MIN_VALUE_EXTENSION_URL, valueDecimal = it) },
         max?.let { Extension(url = MAX_VALUE_EXTENSION_URL, valueDecimal = it) },
+    ),
+)
+
+/**
+ * A well-formed slider (an IntegerField with the itemControl=slider extension and both labels).
+ * Pass null for a label to omit it, to build deliberately malformed sliders.
+ * min/max are omitted by default, so the 0-100 defaults apply.
+ */
+fun sliderField(
+    linkId: String,
+    low: String? = "Low",
+    high: String? = "High",
+    min: Int? = null,
+    max: Int? = null,
+): FieldDef.IntegerField = FieldDef.IntegerField(
+    linkId = linkId,
+    extension = listOfNotNull(
+        Extension(
+            url = ITEM_CONTROL_EXTENSION_URL,
+            valueCodeableConcept = CodeableConcept(
+                listOf(ExtensionCoding(system = ITEM_CONTROL_SYSTEM_URL, code = "slider")),
+            ),
+        ),
+        low?.let { Extension(url = SLIDER_LOW_LABEL_EXTENSION_URL, valueString = it) },
+        high?.let { Extension(url = SLIDER_HIGH_LABEL_EXTENSION_URL, valueString = it) },
+        min?.let { Extension(url = MIN_VALUE_EXTENSION_URL, valueInteger = it) },
+        max?.let { Extension(url = MAX_VALUE_EXTENSION_URL, valueInteger = it) },
     ),
 )

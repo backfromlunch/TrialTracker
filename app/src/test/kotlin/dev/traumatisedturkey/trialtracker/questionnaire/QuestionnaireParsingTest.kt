@@ -1,5 +1,9 @@
 package dev.traumatisedturkey.trialtracker.questionnaire
 
+import dev.traumatisedturkey.trialtracker.fields.Choice
+import dev.traumatisedturkey.trialtracker.fields.Coding
+import dev.traumatisedturkey.trialtracker.fields.Extension
+import dev.traumatisedturkey.trialtracker.fields.FieldDef
 import dev.traumatisedturkey.trialtracker.fixtures.MAX_VALUE_EXTENSION_URL
 import dev.traumatisedturkey.trialtracker.fixtures.MIN_VALUE_EXTENSION_URL
 import dev.traumatisedturkey.trialtracker.fixtures.MOOD_SYSTEM_URL
@@ -67,6 +71,7 @@ class QuestionnaireParsingTest {
         assertTrue(byId["notes"] is FieldDef.TextField)
         assertTrue(byId["logged_at"] is FieldDef.DateField)
         assertTrue(byId["bedtime"] is FieldDef.PeriodField)
+        assertTrue(byId["coffee"] is FieldDef.CounterField)
     }
 
     @Test
@@ -116,8 +121,20 @@ class QuestionnaireParsingTest {
         val field = json.decodeFromString(FieldDef.serializer(), choiceFieldJson) as FieldDef.ChoiceField
         assertEquals(
             listOf(
-                Choice(Coding("https://example.com/fhir/CodeSystem/mood", JsonPrimitive("1"), "Low")),
-                Choice(Coding("https://example.com/fhir/CodeSystem/mood", JsonPrimitive("other"), "Other")),
+                Choice(
+                    Coding(
+                        "https://example.com/fhir/CodeSystem/mood",
+                        JsonPrimitive("1"),
+                        "Low",
+                    ),
+                ),
+                Choice(
+                    Coding(
+                        "https://example.com/fhir/CodeSystem/mood",
+                        JsonPrimitive("other"),
+                        "Other",
+                    ),
+                ),
             ),
             field.choices,
         )

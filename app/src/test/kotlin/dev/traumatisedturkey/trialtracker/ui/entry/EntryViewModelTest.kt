@@ -3,6 +3,7 @@ package dev.traumatisedturkey.trialtracker.ui.entry
 import dev.traumatisedturkey.trialtracker.data.Entry
 import dev.traumatisedturkey.trialtracker.data.EntryDao
 import dev.traumatisedturkey.trialtracker.fixtures.exampleQuestionnaire
+import dev.traumatisedturkey.trialtracker.questionnaire.counterTimestamps
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -10,6 +11,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.int
@@ -18,7 +20,10 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
@@ -49,6 +54,15 @@ private class FakeEntryDao(
     override suspend fun getAll(trialId: String): List<Entry> = error("not used")
 
     override suspend fun getDateBounds(trialId: String) = error("not used")
+}
+
+private class MutableClock(
+    var now: Instant,
+    private val zone: ZoneId,
+) : Clock() {
+    override fun getZone(): ZoneId = zone
+    override fun withZone(zone: ZoneId): Clock = MutableClock(now, zone)
+    override fun instant(): Instant = now
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -110,7 +124,7 @@ class EntryViewModelTest {
         val saved = dao.upserts.single()
         assertEquals(trialId, saved.trialId)
         assertEquals(LocalDate.now().format(dateFormatter), saved.date)
-        assertEquals("""{"sleep":6}""", saved.answersJson)
+        assertEquals("""{"sleep":6,"coffee":[]}""", saved.answersJson)
     }
 
     @Test
@@ -207,5 +221,210 @@ class EntryViewModelTest {
 
         assertEquals(fastDate, viewModel.currentDate.value)
         assertEquals(2, viewModel.answers.value["sleep"]!!.jsonPrimitive.int)
+    }
+
+    // --- counters ---
+
+    // 07:12:03Z is 08:12:03 in London, which is on BST (+01:00) on this date.
+    private val london = ZoneId.of("Europe/London")
+    private val t0 = Instant.parse("2026-10-17T07:12:03Z")
+
+    @Test
+    fun `incrementCounter on a counter with no events stores one timestamp with the clock's time and offset and the entry's date`() = runTest {
+        val today = LocalDate.now()
+        val viewModel = EntryViewModel(FakeEntryDao(), exampleQuestionnaire, trialId, MutableClock(t0, london))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.incrementCounter("coffee")
+
+        assertEquals(
+            listOf("${today}T08:12:03+01:00"),
+            viewModel.answers.value["coffee"].counterTimestamps(),
+        )
+    }
+
+    @Test
+    fun `incrementCounter appends in press order`() = runTest {
+        val today = LocalDate.now()
+        val clock = MutableClock(t0, london)
+        val viewModel = EntryViewModel(FakeEntryDao(), exampleQuestionnaire, trialId, clock)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.incrementCounter("coffee")
+        clock.now = Instant.parse("2026-10-17T10:40:51Z")
+        viewModel.incrementCounter("coffee")
+
+        assertEquals(
+            listOf("${today}T08:12:03+01:00", "${today}T11:40:51+01:00"),
+            viewModel.answers.value["coffee"].counterTimestamps(),
+        )
+    }
+
+    @Test
+    fun `two increments before any save completes are both kept`() = runTest {
+        val today = LocalDate.now()
+        val dao = FakeEntryDao()
+        val viewModel = EntryViewModel(dao, exampleQuestionnaire, trialId, MutableClock(t0, london))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.incrementCounter("coffee")
+        viewModel.incrementCounter("coffee")
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(2, viewModel.answers.value["coffee"].counterTimestamps().size)
+        assertEquals(
+            """{"coffee":["${today}T08:12:03+01:00","${today}T08:12:03+01:00"]}""",
+            dao.upserts.last().answersJson,
+        )
+    }
+
+    @Test
+    fun `incrementCounter persists the timestamp list`() = runTest {
+        val today = LocalDate.now()
+        val dao = FakeEntryDao()
+        val viewModel = EntryViewModel(dao, exampleQuestionnaire, trialId, MutableClock(t0, london))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.incrementCounter("coffee")
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("""{"coffee":["${today}T08:12:03+01:00"]}""", dao.upserts.single().answersJson)
+    }
+
+    @Test
+    fun `incrementCounter leaves other answers alone`() = runTest {
+        val today = LocalDate.now()
+        val dao = FakeEntryDao(entriesByKey = mapOf(today.format(dateFormatter) to entry(today, """{"sleep":5}""")))
+        val viewModel = EntryViewModel(dao, exampleQuestionnaire, trialId, MutableClock(t0, london))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.incrementCounter("coffee")
+
+        assertEquals(5, viewModel.answers.value["sleep"]!!.jsonPrimitive.int)
+    }
+
+    @Test
+    fun `decrementCounter removes the most recent timestamp`() = runTest {
+        val today = LocalDate.now()
+        val stored = """{"coffee":["2026-10-17T08:12:03+01:00","2026-10-17T11:40:51+01:00"]}"""
+        val dao = FakeEntryDao(entriesByKey = mapOf(today.format(dateFormatter) to entry(today, stored)))
+        val viewModel = EntryViewModel(dao, exampleQuestionnaire, trialId)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.decrementCounter("coffee")
+
+        assertEquals(
+            listOf("2026-10-17T08:12:03+01:00"),
+            viewModel.answers.value["coffee"].counterTimestamps(),
+        )
+    }
+
+    @Test
+    fun `decrementCounter on the last timestamp stores an empty array, not a removed key`() = runTest {
+        val today = LocalDate.now()
+        val stored = """{"coffee":["2026-10-17T08:12:03+01:00"]}"""
+        val dao = FakeEntryDao(entriesByKey = mapOf(today.format(dateFormatter) to entry(today, stored)))
+        val viewModel = EntryViewModel(dao, exampleQuestionnaire, trialId)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.decrementCounter("coffee")
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(JsonArray(emptyList()), viewModel.answers.value["coffee"])
+        assertEquals("""{"coffee":[]}""", dao.upserts.single().answersJson)
+    }
+
+    @Test
+    fun `decrementCounter on a counter with no events does nothing`() = runTest {
+        val dao = FakeEntryDao()
+        val viewModel = EntryViewModel(dao, exampleQuestionnaire, trialId)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.decrementCounter("coffee")
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(JsonObject(emptyMap()), viewModel.answers.value)
+        assertEquals(0, dao.upserts.size)
+    }
+
+    @Test
+    fun `decrementCounter on an already-empty counter does nothing`() = runTest {
+        val today = LocalDate.now()
+        val dao = FakeEntryDao(entriesByKey = mapOf(today.format(dateFormatter) to entry(today, """{"coffee":[]}""")))
+        val viewModel = EntryViewModel(dao, exampleQuestionnaire, trialId)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.decrementCounter("coffee")
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0, dao.upserts.size)
+    }
+
+    @Test
+    fun `incrementCounter on a past day stamps the past day's date with the clock's time`() = runTest {
+        val yesterday = LocalDate.now().minusDays(1)
+        val dao = FakeEntryDao()
+        val viewModel = EntryViewModel(dao, exampleQuestionnaire, trialId, MutableClock(t0, london))
+        dispatcher.scheduler.advanceUntilIdle()
+        viewModel.goToPreviousDay()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.incrementCounter("coffee")
+        dispatcher.scheduler.advanceUntilIdle()
+
+        val saved = dao.upserts.single()
+        assertEquals(yesterday.format(dateFormatter), saved.date)
+        assertEquals("""{"coffee":["${yesterday}T08:12:03+01:00"]}""", saved.answersJson)
+    }
+
+    @Test
+    fun `a non-counter update on an empty day also stores the counter as an empty array`() = runTest {
+        val dao = FakeEntryDao()
+        val viewModel = EntryViewModel(dao, exampleQuestionnaire, trialId)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.updateAnswer("sleep", JsonPrimitive(6))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(JsonArray(emptyList()), viewModel.answers.value["coffee"])
+        assertEquals("""{"sleep":6,"coffee":[]}""", dao.upserts.single().answersJson)
+    }
+
+    @Test
+    fun `a non-counter update normalises a loaded entry whose counter is null`() = runTest {
+        val today = LocalDate.now()
+        val dao =
+            FakeEntryDao(
+                entriesByKey =
+                mapOf(
+                    today.format(dateFormatter) to
+                        entry(today, """{"sleep":5,"coffee":null}"""),
+                ),
+            )
+        val viewModel = EntryViewModel(dao, exampleQuestionnaire, trialId)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.updateAnswer("sleep", JsonPrimitive(6))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(JsonArray(emptyList()), viewModel.answers.value["coffee"])
+        assertEquals("""{"sleep":6,"coffee":[]}""", dao.upserts.single().answersJson)
+    }
+
+    @Test
+    fun `a non-counter update leaves existing counter timestamps alone`() = runTest {
+        val today = LocalDate.now()
+        val stored = """{"coffee":["2026-10-17T08:12:03+01:00"]}"""
+        val dao =
+            FakeEntryDao(entriesByKey = mapOf(today.format(dateFormatter) to entry(today, stored)))
+        val viewModel = EntryViewModel(dao, exampleQuestionnaire, trialId)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.updateAnswer("sleep", JsonPrimitive(6))
+
+        assertEquals(
+            listOf("2026-10-17T08:12:03+01:00"),
+            viewModel.answers.value["coffee"].counterTimestamps(),
+        )
     }
 }

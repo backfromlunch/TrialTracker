@@ -1,13 +1,12 @@
 package dev.traumatisedturkey.trialtracker.export
 
 import dev.traumatisedturkey.trialtracker.data.Entry
+import dev.traumatisedturkey.trialtracker.fields.FieldDef
 import dev.traumatisedturkey.trialtracker.fixtures.MOOD_SYSTEM_URL
 import dev.traumatisedturkey.trialtracker.fixtures.exampleQuestionnaire
 import dev.traumatisedturkey.trialtracker.fixtures.exampleServiceRequest
 import dev.traumatisedturkey.trialtracker.fixtures.withGroupItems
-import dev.traumatisedturkey.trialtracker.questionnaire.Choice
-import dev.traumatisedturkey.trialtracker.questionnaire.Coding
-import dev.traumatisedturkey.trialtracker.questionnaire.FieldDef
+import dev.traumatisedturkey.trialtracker.questionnaire.COUNTER_EVENT_URL
 import dev.traumatisedturkey.trialtracker.questionnaire.Questionnaire
 import dev.traumatisedturkey.trialtracker.servicerequest.ServiceRequest
 import kotlinx.serialization.json.Json
@@ -205,11 +204,74 @@ class JsonExporterTest {
     }
 
     @Test
-    fun `malformed answersJson falls back to just the Date item instead of crashing`() {
+    fun `malformed answersJson falls back to the Date item and a zero counter instead of crashing`() {
         val entries = listOf(Entry(trialId = trialId, date = "2026-07-24", answersJson = "not valid json"))
         val root = buildRoot(entries)
+        val items = dayItem(root)["item"]!!.jsonArray.map { it.jsonObject["linkId"]!!.jsonPrimitive.content }
+        assertEquals(listOf("Date", "coffee"), items) // counter is always exported, as zero
+    }
+
+    // --- counters ---
+
+    private fun coffeeEntry(answersJson: String) = listOf(Entry(trialId = trialId, date = "2026-07-24", answersJson = answersJson))
+
+    // The counter's single answer object.
+    private fun coffeeAnswer(answersJson: String): JsonObject {
+        val coffee = nestedItem(dayItem(buildRoot(coffeeEntry(answersJson))), "coffee")!!
+        return coffee["answer"]!!.jsonArray.single().jsonObject
+    }
+
+    @Test
+    fun `counter exports its count with one counter-event extension per timestamp, in stored order`() {
+        val answer = coffeeAnswer(
+            """{"coffee":["2026-07-24T08:12:03+01:00","2026-07-24T11:40:51+01:00","2026-07-24T15:05:27+01:00"]}""",
+        )
+        assertEquals(3, answer["valueInteger"]!!.jsonPrimitive.int)
+        val events = answer["extension"]!!.jsonArray.map { it.jsonObject }
+        assertEquals(List(3) { COUNTER_EVENT_URL }, events.map { it["url"]!!.jsonPrimitive.content })
+        assertEquals(
+            listOf("2026-07-24T08:12:03+01:00", "2026-07-24T11:40:51+01:00", "2026-07-24T15:05:27+01:00"),
+            events.map { it["valueDateTime"]!!.jsonPrimitive.content },
+        )
+    }
+
+    @Test
+    fun `counter with one timestamp exports count 1 and one extension`() {
+        val answer = coffeeAnswer("""{"coffee":["2026-07-24T08:12:03Z"]}""")
+        assertEquals(1, answer["valueInteger"]!!.jsonPrimitive.int)
+        assertEquals(1, answer["extension"]!!.jsonArray.size)
+    }
+
+    @Test
+    fun `counter with an empty array exports valueInteger 0 and no extension`() {
+        val answer = coffeeAnswer("""{"coffee":[]}""")
+        assertEquals(0, answer["valueInteger"]!!.jsonPrimitive.int)
+        assertNull(answer["extension"])
+    }
+
+    @Test
+    fun `a missing, null or non-array counter also exports as zero`() {
+        for (json in listOf("""{"sleep":7}""", """{"coffee":null}""", """{"coffee":"oops"}""")) {
+            val answer = coffeeAnswer(json)
+            assertEquals(json, 0, answer["valueInteger"]!!.jsonPrimitive.int)
+            assertNull(json, answer["extension"])
+        }
+    }
+
+    @Test
+    fun `a counter is exported as a single answer however many timestamps it has`() {
+        val coffee = nestedItem(
+            dayItem(buildRoot(coffeeEntry("""{"coffee":["2026-07-24T08:12:03Z","2026-07-24T09:00:00Z"]}"""))),
+            "coffee",
+        )!!
+        assertEquals(1, coffee["answer"]!!.jsonArray.size)
+    }
+
+    @Test
+    fun `a counter does not disturb the other fields in the same entry`() {
+        val root = buildRoot(coffeeEntry("""{"sleep":7,"coffee":["2026-07-24T08:12:03+01:00"]}"""))
         val day = dayItem(root)
-        assertEquals(1, day["item"]!!.jsonArray.size)
-        assertEquals("Date", day["item"]!!.jsonArray[0].jsonObject["linkId"]!!.jsonPrimitive.content)
+        assertEquals(7, nestedItem(day, "sleep")!!["answer"]!!.jsonArray[0].jsonObject["valueInteger"]!!.jsonPrimitive.int)
+        assertEquals(1, nestedItem(day, "coffee")!!["answer"]!!.jsonArray[0].jsonObject["valueInteger"]!!.jsonPrimitive.int)
     }
 }

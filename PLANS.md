@@ -16,5 +16,14 @@
 DB architecture allows for multiple tials, but (by design) impementation currently only ever surfaces exactly one "active" trial at a time
  - [] UI to list, choose, or manage multiple trials.
 
+## Per-type field logic
+Idea: move per-type behaviour into the `FieldDef` subclasses (`fields/`), so a new type is one file plus one composable.
+ - [] `FieldDef.normalise(stored)`: what a save writes (counter: unset → `[]`). Replaces `withZeroCounters`.
+ - [] `FieldDef.isCompleted(stored)`: replaces the per-type check in `DayStatus`.
+ - [] `FieldDef.export(stored): ExportValue`: a neutral value (None, Integer, Text, Coded, Events, ...). `CsvExporter` and `JsonExporter` each format it, so `FieldDef` knows nothing of CSV or FHIR.
+ - [] A recogniser per subclass, replacing the `when` in `FieldDefSerializer`.
+ - [] Per-type files: `fields/IntegerField.kt` ... `CounterField.kt` (class + answer logic; absorbs `CounterAnswer.kt`), `fields/ExportValue.kt`.
+ - [] `ui/entry/field/`: one composable per type. Compose stays out of `FieldDef`; the UI keeps one exhaustive `when`.
+
 ## Other
   - [] can we load servicerequest directly from a qrcode? (may need compression)

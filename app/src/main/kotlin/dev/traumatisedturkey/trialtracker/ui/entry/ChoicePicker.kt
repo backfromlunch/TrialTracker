@@ -34,7 +34,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
-import dev.traumatisedturkey.trialtracker.questionnaire.Choice
+import dev.traumatisedturkey.trialtracker.fields.Choice
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -132,5 +132,10 @@ private fun ChoiceList(
 }
 
 // "<code> - <display>" so the raw code being saved to the DB is visible alongside its prompt text.
+// If display is absent or blank, just "<code>".
 // .content gives the unquoted string form of the JsonPrimitive code.
-internal fun Choice.displayText(): String = "${valueCoding.code.content} - ${valueCoding.display}"
+internal fun Choice.displayText(): String {
+    val code = valueCoding.code.content
+    val display = valueCoding.display
+    return if (display.isNullOrBlank()) code else "$code - $display"
+}

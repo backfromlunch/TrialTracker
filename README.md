@@ -47,7 +47,8 @@ For subsequent startups, the app opens on the 'Entry' screen. A hamburger menu (
   keystroke, so there is no explicit save button.
 - **Summary** — a calendar view of the trial so far.
 - **Trial and Questionnaire** — load/review the active ServiceRequest and Questionnaire.
-- **Export results** — write results out as `.json` or `.csv`.
+- **Export results** — write results out as `.json` or `.csv`. A counter is exported as its count in both;
+  JSON also carries one timestamp per press. No presses is 0.
 - **Settings**
 - **Help**
 

@@ -105,18 +105,11 @@
           ]
         },
         {
-          "linkId": "NCaffeine",
-          "text": "Number of Caffeinated Drinks",
+          "linkId": "coffee",
+          "text": "Cups of coffee",
           "type": "integer",
           "extension": [
-            {
-              "url": "http://hl7.org/fhir/StructureDefinition/minValue",
-              "valueInteger": 0
-            },
-            {
-              "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
-              "valueInteger": 10
-            }
+            { "url": "https://traumatisedturkey.dev/fhir/StructureDefinition/questionnaire-counter", "valueBoolean": true }
           ]
         },
         {

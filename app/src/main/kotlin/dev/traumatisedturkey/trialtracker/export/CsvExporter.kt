@@ -1,9 +1,13 @@
 package dev.traumatisedturkey.trialtracker.export
 
 import dev.traumatisedturkey.trialtracker.data.Entry
+import dev.traumatisedturkey.trialtracker.fields.FieldDef
 import dev.traumatisedturkey.trialtracker.questionnaire.Questionnaire
+import dev.traumatisedturkey.trialtracker.questionnaire.counterTimestamps
 import dev.traumatisedturkey.trialtracker.servicerequest.ServiceRequest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.time.OffsetDateTime
@@ -19,7 +23,8 @@ object CsvExporter {
         entries: List<Entry>,
         authored: OffsetDateTime,
     ): String {
-        val fieldIds = questionnaire.itemGroup().map { it.linkId }
+        val fields = questionnaire.itemGroup()
+        val fieldIds = fields.map { it.linkId }
         val titleComments = listOf(
             "# questionnaire: ${questionnaire.questionnaireCanonical()}",
             "# serviceRequest: ${serviceRequest.serviceRequestValue}",
@@ -37,13 +42,23 @@ object CsvExporter {
                     }
                 val cells =
                     listOf(entry.date) +
-                        fieldIds.map { id ->
-                            (answers[id] as? JsonPrimitive)?.content ?: ""
-                        }
+                        fields.map { field -> cellValue(field, answers[field.linkId]) }
                 cells.joinToString(",") { escapeCell(it) }
             }
 
         return (titleComments + listOf(header) + rows).joinToString("\n")
+    }
+
+    private fun cellValue(
+        field: FieldDef,
+        answer: JsonElement?,
+    ): String = when (field) {
+        // See CounterAnswer.kt: CSV exports only the count. No events (missing, null or []) is 0.
+        is FieldDef.CounterField -> answer.counterTimestamps().size.toString()
+
+        // JsonNull is a JsonPrimitive whose content is the string "null", so it must be
+        // excluded explicitly: a blanked/cleared answer is an empty cell.
+        else -> (answer as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content ?: ""
     }
 
     private fun escapeCell(value: String): String {

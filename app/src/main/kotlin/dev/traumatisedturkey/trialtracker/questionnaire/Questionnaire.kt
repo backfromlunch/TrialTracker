@@ -1,5 +1,6 @@
 package dev.traumatisedturkey.trialtracker.questionnaire
 
+import dev.traumatisedturkey.trialtracker.fields.FieldDef
 import kotlinx.serialization.Serializable
 
 @Serializable

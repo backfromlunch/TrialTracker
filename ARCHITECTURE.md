@@ -76,6 +76,12 @@ sets `currentScreen` directly.
 The app is configured from two FHIR-shaped JSON files, `ServiceRequest` and `Questionnaire`. See
 [samples/](samples) for real examples; the formal field-level definition lives in `FieldDef.kt`.
 
+## Counter fields
+
+An `integer` item with the `questionnaire-counter` extension is a counter (`FieldDef.CounterField`, chosen by
+`FieldDefSerializer`). Stored as a JSON array of timestamps, one per press; no presses is always `[]`. Format
+and export rules: `questionnaire/CounterAnswer.kt`.
+
 ## Build
 
 - **AGP 9.4.0 requires Gradle 9.6.0+.** Wrapper is pinned to 9.6.1 — update `gradle-wrapper.properties`'
@@ -95,8 +101,6 @@ The app is configured from two FHIR-shaped JSON files, `ServiceRequest` and `Que
 - **Command-line Gradle needs `JAVA_HOME` set to Android Studio's bundled JBR**, not the system JDK, to match the
   IDE. Snap install path: `/snap/android-studio/<revision>/jbr` — re-point after Android Studio updates. Current
   version: JBR 25 (periodically check via Android Studio → About). CI currently pins JDK 25 (Temurin). Keep them in sync.
-- **Command-line Gradle needs `JAVA_HOME` set to Android Studio's bundled JBR**, not the system JDK, to match the
-  IDE. Snap install path: `/snap/android-studio/<revision>/jbr` — re-point after Android Studio updates.
 
 ## Automated testing
 

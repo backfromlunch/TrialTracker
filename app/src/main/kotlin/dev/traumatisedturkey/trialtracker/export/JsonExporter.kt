@@ -1,11 +1,15 @@
 package dev.traumatisedturkey.trialtracker.export
 
 import dev.traumatisedturkey.trialtracker.data.Entry
-import dev.traumatisedturkey.trialtracker.questionnaire.FieldDef
+import dev.traumatisedturkey.trialtracker.fields.FieldDef
+import dev.traumatisedturkey.trialtracker.questionnaire.COUNTER_EVENT_URL
 import dev.traumatisedturkey.trialtracker.questionnaire.Questionnaire
+import dev.traumatisedturkey.trialtracker.questionnaire.counterTimestamps
 import dev.traumatisedturkey.trialtracker.servicerequest.ServiceRequest
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
@@ -119,13 +123,12 @@ object JsonExporter {
                     )
 
                     questionnaire.itemGroup().forEach { field ->
-                        val rawAnswer = answers[field.linkId]
-                        val valueObject = fieldAnswerValue(field, rawAnswer as? JsonPrimitive)
-                        if (valueObject != null) {
+                        val valueObjects = fieldAnswerValues(field, answers[field.linkId])
+                        if (valueObjects.isNotEmpty()) {
                             add(
                                 buildJsonObject {
                                     put("linkId", field.linkId)
-                                    put("answer", buildJsonArray { add(valueObject) })
+                                    put("answer", buildJsonArray { valueObjects.forEach { add(it) } })
                                 },
                             )
                         }
@@ -136,13 +139,52 @@ object JsonExporter {
     }
 
     /**
+     * All answers for a field. Usually zero or one. A counter always gives exactly one: its count, plus
+     * one extension per timestamp. Empty means there is nothing to export, and the item is omitted.
+     *
+     * The `else` is deliberate: fieldAnswerValue's `when` stays exhaustive, so a new FieldDef type
+     * still fails to compile there.
+     */
+    private fun fieldAnswerValues(
+        field: FieldDef,
+        answer: JsonElement?,
+    ): List<JsonObject> = when (field) {
+        // See CounterAnswer.kt: JSON keeps every timestamp (as extensions); CSV exports only the count.
+        is FieldDef.CounterField -> {
+            val timestamps = answer.counterTimestamps()
+            listOf(
+                buildJsonObject {
+                    put("valueInteger", timestamps.size)
+                    if (timestamps.isNotEmpty()) {
+                        put(
+                            "extension",
+                            buildJsonArray {
+                                timestamps.forEach { timestamp ->
+                                    add(
+                                        buildJsonObject {
+                                            put("url", COUNTER_EVENT_URL)
+                                            put("valueDateTime", timestamp)
+                                        },
+                                    )
+                                }
+                            },
+                        )
+                    }
+                },
+            )
+        }
+
+        else -> listOfNotNull(fieldAnswerValue(field, answer as? JsonPrimitive))
+    }
+
+    /**
      * Returns null when there's no usable answer - either the key is missing, or it was explicitly blanked to JsonNull.
      */
     private fun fieldAnswerValue(
         field: FieldDef,
         answer: JsonPrimitive?,
     ): JsonObject? {
-        if (answer == null || (answer.isString && answer.content.isEmpty())) return null
+        if (answer == null || answer is JsonNull || (answer.isString && answer.content.isEmpty())) return null
 
         return when (field) {
             is FieldDef.IntegerField -> {
@@ -176,17 +218,20 @@ object JsonExporter {
                 // it.valueCoding.code == answer
                 val choice = field.choices.find { it.valueCoding.code.content == answer.content } ?: return null
                 val system = choice.valueCoding.system ?: "$FALLBACK_CODE_SYSTEM_BASE/${field.linkId}"
+                val display = choice.valueCoding.display
                 buildJsonObject {
                     put(
                         "valueCoding",
                         buildJsonObject {
                             put("system", system)
                             put("code", choice.valueCoding.code.content)
-                            put("display", choice.valueCoding.display)
+                            if (!display.isNullOrBlank()) put("display", display)
                         },
                     )
                 }
             }
+
+            is FieldDef.CounterField -> null // multi-answer: handled by fieldAnswerValues
         }
     }
 }

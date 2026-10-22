@@ -1,5 +1,8 @@
 package dev.traumatisedturkey.trialtracker.questionnaire
 
+import dev.traumatisedturkey.trialtracker.fields.Choice
+import dev.traumatisedturkey.trialtracker.fields.Coding
+import dev.traumatisedturkey.trialtracker.fields.FieldDef
 import dev.traumatisedturkey.trialtracker.fixtures.decimalField
 import dev.traumatisedturkey.trialtracker.fixtures.exampleQuestionnaire
 import dev.traumatisedturkey.trialtracker.fixtures.integerField
@@ -73,7 +76,19 @@ class QuestionnaireCompatibilityTest {
         val candidate = exampleQuestionnaire.withGroupItems("LogEntry") { fields ->
             fields.map {
                 if (it.linkId == "mood") {
-                    FieldDef.ChoiceField(linkId = "mood", choices = listOf(Choice(Coding(code = JsonPrimitive(3), display = "High"))))
+                    FieldDef.ChoiceField(
+                        linkId = "mood",
+                        choices = listOf(
+                            Choice(
+                                Coding(
+                                    code = JsonPrimitive(
+                                        3,
+                                    ),
+                                    display = "High",
+                                ),
+                            ),
+                        ),
+                    )
                 } else {
                     it
                 }

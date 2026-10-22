@@ -37,7 +37,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import dev.traumatisedturkey.trialtracker.questionnaire.FieldDef
+import dev.traumatisedturkey.trialtracker.fields.FieldDef
+import dev.traumatisedturkey.trialtracker.questionnaire.counterTimestamps
 import dev.traumatisedturkey.trialtracker.ui.SettingsViewModel
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -123,6 +124,8 @@ fun EntryScreen(
                     focusRequester = focusRequesters[index],
                     nextFocusRequester = focusRequesters.getOrNull(index + 1),
                     isReadOnly = isReadOnly,
+                    onIncrementCounter = viewModel::incrementCounter,
+                    onDecrementCounter = viewModel::decrementCounter,
                 )
             }
         }
@@ -137,6 +140,8 @@ private fun FieldRow(
     focusRequester: FocusRequester,
     nextFocusRequester: FocusRequester?,
     isReadOnly: Boolean,
+    onIncrementCounter: (String) -> Unit,
+    onDecrementCounter: (String) -> Unit,
 ) {
     // isReadOnly is deliberately handled here rather than inside each field renderer.
 
@@ -153,25 +158,41 @@ private fun FieldRow(
                 when (field) {
                     is FieldDef.IntegerField -> {
                         val current = answers[field.linkId]?.let { (it as? JsonPrimitive)?.intOrNull }
-                        NumberTextField(
-                            initialText = current?.toString() ?: "",
-                            keyboardType = KeyboardType.Number,
-                            allowDecimal = false,
-                            min = field.min.toDouble(),
-                            max = field.max.toDouble(),
-                            focusRequester = focusRequester,
-                            onNext = { nextFocusRequester?.requestFocus() },
-                            onValueCommitted = { text ->
-                                // allowing blanking of field
-                                val newValue = if (text.isEmpty()) {
-                                    JsonNull
-                                } else {
-                                    text.toIntOrNull()
-                                        ?.let { JsonPrimitive(it) }
-                                }
-                                newValue?.let { onAnswerChange(field.linkId, it) }
-                            },
-                        )
+                        val slider = field.slider
+                        if (slider != null) {
+                            // Clearing stores JsonNull, exactly as blanking a number field does.
+                            SliderInput(
+                                lowLabel = slider.lowLabel,
+                                highLabel = slider.highLabel,
+                                min = field.min,
+                                max = field.max,
+                                currentValue = current,
+                                focusRequester = focusRequester,
+                                onValueChange = { value ->
+                                    onAnswerChange(field.linkId, value?.let { JsonPrimitive(it) } ?: JsonNull)
+                                },
+                            )
+                        } else {
+                            NumberTextField(
+                                initialText = current?.toString() ?: "",
+                                keyboardType = KeyboardType.Number,
+                                allowDecimal = false,
+                                min = field.min.toDouble(),
+                                max = field.max.toDouble(),
+                                focusRequester = focusRequester,
+                                onNext = { nextFocusRequester?.requestFocus() },
+                                onValueCommitted = { text ->
+                                    // allowing blanking of field
+                                    val newValue = if (text.isEmpty()) {
+                                        JsonNull
+                                    } else {
+                                        text.toIntOrNull()
+                                            ?.let { JsonPrimitive(it) }
+                                    }
+                                    newValue?.let { onAnswerChange(field.linkId, it) }
+                                },
+                            )
+                        }
                     }
 
                     is FieldDef.DecimalField -> {
@@ -244,10 +265,19 @@ private fun FieldRow(
                         )
                     }
 
-                    else -> {
+                    is FieldDef.DateField -> {
                         Text(
-                            text = "(${field::class.simpleName} — not yet implemented)",
+                            text = "(date — not yet implemented)",
                             style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+
+                    is FieldDef.CounterField -> {
+                        CounterInput(
+                            timestamps = answers[field.linkId].counterTimestamps(),
+                            focusRequester = focusRequester,
+                            onIncrement = { onIncrementCounter(field.linkId) },
+                            onDecrement = { onDecrementCounter(field.linkId) },
                         )
                     }
                 }
@@ -284,8 +314,11 @@ internal fun fieldLabel(field: FieldDef): String {
     val baseText = field.text ?: field.linkId
     // Numeric fields show their valid range too
     return when (field) {
-        is FieldDef.IntegerField -> "$baseText [${field.min}-${field.max}]"
+        // A slider deliberately shows no numbers at all.
+        is FieldDef.IntegerField -> if (field.slider != null) baseText else "$baseText [${field.min}-${field.max}]"
+
         is FieldDef.DecimalField -> "$baseText [${field.min}-${field.max}]"
+
         else -> baseText
     }
 }

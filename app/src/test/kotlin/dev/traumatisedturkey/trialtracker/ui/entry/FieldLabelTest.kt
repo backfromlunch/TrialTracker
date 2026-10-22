@@ -1,10 +1,10 @@
 package dev.traumatisedturkey.trialtracker.ui.entry
 
+import dev.traumatisedturkey.trialtracker.fields.Choice
+import dev.traumatisedturkey.trialtracker.fields.Coding
+import dev.traumatisedturkey.trialtracker.fields.FieldDef
 import dev.traumatisedturkey.trialtracker.fixtures.decimalField
 import dev.traumatisedturkey.trialtracker.fixtures.integerField
-import dev.traumatisedturkey.trialtracker.questionnaire.Choice
-import dev.traumatisedturkey.trialtracker.questionnaire.Coding
-import dev.traumatisedturkey.trialtracker.questionnaire.FieldDef
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert
 import org.junit.Test

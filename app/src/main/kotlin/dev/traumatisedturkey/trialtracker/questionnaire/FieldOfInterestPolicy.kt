@@ -1,5 +1,7 @@
 package dev.traumatisedturkey.trialtracker.questionnaire
 
+import dev.traumatisedturkey.trialtracker.fields.FieldDef
+
 /**
  * Currently "of interest" is a hardcoded exclusion (everything except Comments).
  * A future, enhanced serviceRequest could declare this explicitly per-field (e.g. an "optional": true flag).

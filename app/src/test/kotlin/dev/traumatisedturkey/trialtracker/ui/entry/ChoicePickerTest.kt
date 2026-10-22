@@ -1,7 +1,7 @@
 package dev.traumatisedturkey.trialtracker.ui.entry
 
-import dev.traumatisedturkey.trialtracker.questionnaire.Choice
-import dev.traumatisedturkey.trialtracker.questionnaire.Coding
+import dev.traumatisedturkey.trialtracker.fields.Choice
+import dev.traumatisedturkey.trialtracker.fields.Coding
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert
 import org.junit.Test

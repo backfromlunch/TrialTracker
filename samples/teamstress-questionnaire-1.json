@@ -61,12 +61,23 @@
           "type": "integer",
           "extension": [
             {
-              "url": "http://hl7.org/fhir/StructureDefinition/minValue",
-              "valueInteger": 0
+              "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+              "valueCodeableConcept": {
+                "coding": [
+                  {
+                    "system": "http://hl7.org/fhir/questionnaire-item-control",
+                    "code": "slider"
+                  }
+                ]
+              }
             },
             {
-              "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
-              "valueInteger": 10
+              "url": "https://traumatisedturkey.dev/fhir/StructureDefinition/slider-low-label",
+              "valueString": "Fresh"
+            },
+            {
+              "url": "https://traumatisedturkey.dev/fhir/StructureDefinition/slider-high-label",
+              "valueString": "Exhausted"
             }
           ]
         },
